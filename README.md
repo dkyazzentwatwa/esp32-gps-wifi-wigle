@@ -27,6 +27,7 @@ This project is a comprehensive GPS and WiFi network scanning system using an ES
 <img src="wardriver1.jpg" alt="Wardriver project" width="300"/>
 <br/>
 <img src="wardriver2.jpg" alt="Wardriver project" width="300"/>
+
 ## How It Works
 
 1. **Initialization**: Sets up serial communication, initializes the GPS module, OLED display, SD card, and RTC.
