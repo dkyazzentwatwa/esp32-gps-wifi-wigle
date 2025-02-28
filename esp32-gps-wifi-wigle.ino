@@ -22,7 +22,7 @@ static const uint32_t GPSBaud = 9600;  // GPS module baud rate
 #define OLED_RESET -1
 #define SD_CS_PIN 5       // Chip select pin for SD card
 #define MIN_SATELLITES 4  // Minimum number of satellites for a valid GPS fix
-#define PST_OFFSET -8     // PST is UTC-8
+#define PST_OFFSET -8     // PST is UTC-8 (unused in optimized code but kept for compatibility)
 
 // Objects for GPS, serial communication, display, and SD card
 TinyGPSPlus gps;
@@ -30,19 +30,22 @@ HardwareSerial gpsSerial(1);
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 File csvFile;
 
+// Global CSV filename
+char csvFilename[32];
+
 // Counters for WiFi scans and networks found
 int scanCount = 0;
 int networkCount = 0;
 
 void setup() {
-  Serial.begin(115200); // Start serial communication for debugging
-  gpsSerial.begin(GPSBaud, SERIAL_8N1, RXPin, TXPin); // Start GPS serial communication
-  delay(5000); // Allow time for the system to stabilize
+  Serial.begin(115200);
+  gpsSerial.begin(GPSBaud, SERIAL_8N1, RXPin, TXPin);
+  delay(5000); // Allow GPS module to stabilize
 
   // Initialize OLED display
   if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
     Serial.println(F("SSD1306 allocation failed"));
-    for (;;); // Infinite loop if display initialization fails
+    for (;;);
   }
   display.display();
   delay(2000);
@@ -50,7 +53,7 @@ void setup() {
 
   // Initialize SD card
   if (!SD.begin(SD_CS_PIN)) {
-    Serial.println("Card failed, or not present");
+    Serial.println(F("Card failed, or not present"));
     displayError("SD Card Error");
     return;
   }
@@ -61,77 +64,72 @@ void setup() {
     return;
   }
 
-  rtc.begin(DateTime(F(__DATE__), F(__TIME__))); // Initialize RTC with compile time
-
+  rtc.begin(DateTime(F(__DATE__), F(__TIME__))); // Start RTC with compile time
   Serial.println(F("GPS and WiFi Scanner"));
 }
 
 void loop() {
-  // Read GPS data
+  // Read all available GPS data
   while (gpsSerial.available() > 0) {
     gps.encode(gpsSerial.read());
   }
 
-  // Check if GPS data is valid
+  // Validate GPS fix
   if (gps.location.isValid() && gps.hdop.isValid() && gps.date.isValid() && gps.time.isValid() && gps.satellites.value() >= MIN_SATELLITES) {
-    // Update RTC with GPS time
+    // Sync RTC with GPS time
     DateTime gpsTime(gps.date.year(), gps.date.month(), gps.date.day(), gps.time.hour(), gps.time.minute(), gps.time.second());
     rtc.adjust(gpsTime);
 
-    // Display GPS data and scan for WiFi networks
-    displayGPSData();
-    scanWiFiNetworks();
-    displayGPSData();
-    delay(15000); // Wait 15 seconds before next scan
+    displayGPSData();    // Show current data before scanning
+    scanWiFiNetworks();  // Scan and log networks
+    displayGPSData();    // Update display with new network count
+    delay(15000);        // Wait 15 seconds
   } else {
-    displaySearching();
+    displaySearching();  // Show searching status
   }
 }
 
-// Display GPS data on the OLED screen
+// Display GPS data on OLED
 void displayGPSData() {
   display.clearDisplay();
   display.setTextSize(1);
   display.setTextColor(SSD1306_WHITE);
   display.setCursor(0, 0);
-  display.print("Lat: ");
+  display.print(F("Lat: "));
   display.println(gps.location.lat(), 6);
-  display.print("Lng: ");
+  display.print(F("Lng: "));
   display.println(gps.location.lng(), 6);
-  display.print("Alt: ");
+  display.print(F("Alt: "));
   display.println(gps.altitude.meters());
-  display.print("Sat: ");
+  display.print(F("Sat: "));
   display.println(gps.satellites.value());
 
-  // Get the current time from RTC and display it
   DateTime now = rtc.now();
-  char buffer[30];
+  char buffer[20]; // Reduced size since we don’t need full buffer
   snprintf(buffer, sizeof(buffer), "%04d-%02d-%02d %02d:%02d:%02d", now.year(), now.month(), now.day(), now.hour(), now.minute(), now.second());
-  display.print("Time: ");
+  display.print(F("Time: "));
   display.println(buffer);
 
-  // Display the number of networks found and scan count
-  display.print("Nets: ");
+  display.print(F("Nets: "));
   display.println(networkCount);
-  display.print("Scans: ");
+  display.print(F("Scans: "));
   display.println(scanCount);
-
   display.display();
 }
 
-// Display a message while searching for GPS signal
+// Show GPS searching status
 void displaySearching() {
   display.clearDisplay();
   display.setTextSize(1);
   display.setTextColor(SSD1306_WHITE);
   display.setCursor(0, 0);
-  display.println("Searching for GPS...");
-  display.print("Satellites: ");
+  display.println(F("Searching for GPS..."));
+  display.print(F("Satellites: "));
   display.println(gps.satellites.value());
   display.display();
 }
 
-// Display an error message on the OLED screen
+// Display error message
 void displayError(const char* error) {
   display.clearDisplay();
   display.setTextSize(1);
@@ -141,95 +139,87 @@ void displayError(const char* error) {
   display.display();
 }
 
-// Initialize a new CSV file for storing WiFi scan results
+// Initialize timestamped CSV file
 bool initializeCSV() {
   DateTime now = rtc.now();
-  char filename[32];
-  snprintf(filename, sizeof(filename), "/wigle_%04d%02d%02d_%02d%02d%02d.csv", now.year(), now.month(), now.day(), now.hour(), now.minute(), now.second());
-  csvFile = SD.open(filename, FILE_WRITE);
+  snprintf(csvFilename, sizeof(csvFilename), "/wigle_%04d%02d%02d_%02d%02d%02d.csv", now.year(), now.month(), now.day(), now.hour(), now.minute(), now.second());
+  csvFile = SD.open(csvFilename, FILE_WRITE);
   if (csvFile) {
-    csvFile.println("BSSID,SSID,Capabilities,First timestamp seen,Channel,Frequency,RSSI,Latitude,Longitude,Altitude,Accuracy,RCOIs,MfgrId,Type");
+    csvFile.println(F("BSSID,SSID,Capabilities,First timestamp seen,Channel,Frequency,RSSI,Latitude,Longitude,Altitude,Accuracy,RCOIs,MfgrId,Type"));
     csvFile.close();
     return true;
   }
   return false;
 }
 
-// Scan for WiFi networks and store results in the CSV file
+// Scan WiFi networks and log to CSV
 void scanWiFiNetworks() {
-  networkCount = WiFi.scanNetworks(); // Scan for WiFi networks
-  scanCount++; // Increment scan count
-  csvFile = SD.open("/wigle.csv", FILE_APPEND);
+  networkCount = WiFi.scanNetworks();
+  scanCount++;
+  csvFile = SD.open(csvFilename, FILE_APPEND);
   if (csvFile) {
+    // Precompute values constant across all networks in this scan
+    const char* timestamp = getLocalTimestamp();
+    char latStr[12];
+    dtostrf(gps.location.lat(), 11, 6, latStr);
+    char lngStr[12];
+    dtostrf(gps.location.lng(), 11, 6, lngStr);
+    char altStr[10];
+    dtostrf(gps.altitude.meters(), 9, 2, altStr);
+    char accStr[10];
+    dtostrf(gps.hdop.hdop(), 9, 2, accStr);
+
     for (int i = 0; i < networkCount; ++i) {
-      writeNetworkData(i);
+      uint8_t* bssid = WiFi.BSSID(i);
+      const char* ssid = WiFi.SSID(i).c_str();
+      const char* capabilities = WiFi.encryptionType(i) == WIFI_AUTH_OPEN ? "Open" : "Secured";
+      int channel = WiFi.channel(i);
+      int frequency = 2400 + (channel - 1) * 5; // 2.4GHz approximation
+      int rssi = WiFi.RSSI(i);
+
+      // Format entire CSV line in one buffer
+      char line[512];
+      snprintf(line, sizeof(line),
+        "\"%02X:%02X:%02X:%02X:%02X:%02X\",\"%s\",\"%s\",\"%s\",%d,%d,%d,%s,%s,%s,%s,\"\",\"\",\"WiFi\"",
+        bssid[0], bssid[1], bssid[2], bssid[3], bssid[4], bssid[5],
+        ssid,
+        capabilities,
+        timestamp,
+        channel,
+        frequency,
+        rssi,
+        latStr,
+        lngStr,
+        altStr,
+        accStr
+      );
+      csvFile.println(line);
     }
     csvFile.close();
   } else {
     displayError("CSV Write Error");
   }
 
-  // Print networks to serial monitor
-  Serial.print("Scan #");
+  // Serial monitor output
+  Serial.print(F("Scan #"));
   Serial.println(scanCount);
-  Serial.print("Networks found: ");
+  Serial.print(F("Networks found: "));
   Serial.println(networkCount);
   for (int i = 0; i < networkCount; ++i) {
-    Serial.print("Network #");
+    Serial.print(F("Network #"));
     Serial.print(i + 1);
-    Serial.print(": ");
+    Serial.print(F(": "));
     Serial.print(WiFi.SSID(i));
-    Serial.print(" (");
+    Serial.print(F(" ("));
     Serial.print(WiFi.RSSI(i));
-    Serial.println(" dBm)");
+    Serial.println(F(" dBm)"));
   }
 }
 
-// Write network data to the CSV file
-void writeNetworkData(int networkIndex) {
-  String bssid = WiFi.BSSIDstr(networkIndex);
-  String ssid = WiFi.SSID(networkIndex);
-  String capabilities = WiFi.encryptionType(networkIndex) == WIFI_AUTH_OPEN ? "Open" : "Secured";
-  String timestamp = getLocalTimestamp();
-  int channel = WiFi.channel(networkIndex);
-  int frequency = 2400 + (channel - 1) * 5;  // Assuming 2.4GHz WiFi
-  int rssi = WiFi.RSSI(networkIndex);
-  String latitude = String(gps.location.lat(), 6);
-  String longitude = String(gps.location.lng(), 6);
-  String altitude = String(gps.altitude.meters());
-  String accuracy = String(gps.hdop.hdop());
-  String rcois = "";   // Placeholder if RCOIs is not available
-  String mfgrid = "";  // Placeholder if Manufacturer ID is not available
-  String type = "WiFi";
-
-  // Write network data to CSV file
-  csvFile.print("\"" + bssid + "\",");
-  csvFile.print("\"" + ssid + "\",");
-  csvFile.print("\"" + capabilities + "\",");
-  csvFile.print("\"" + timestamp + "\",");
-  csvFile.print(channel);
-  csvFile.print(",");
-  csvFile.print(frequency);
-  csvFile.print(",");
-  csvFile.print(rssi);
-  csvFile.print(",");
-  csvFile.print(latitude);
-  csvFile.print(",");
-  csvFile.print(longitude);
-  csvFile.print(",");
-  csvFile.print(altitude);
-  csvFile.print(",");
-  csvFile.print(accuracy);
-  csvFile.print(",");
-  csvFile.print("\"" + rcois + "\",");
-  csvFile.print("\"" + mfgrid + "\",");
-  csvFile.println("\"" + type + "\"");
-}
-
-// Get the current timestamp from the RTC
-String getLocalTimestamp() {
-  DateTime now = rtc.now();  // Use RTC time for timestamp
-  char buffer[30];
+// Get current timestamp as const char*
+const char* getLocalTimestamp() {
+  static char buffer[20]; // Reduced size for efficiency
+  DateTime now = rtc.now();
   snprintf(buffer, sizeof(buffer), "%04d-%02d-%02d %02d:%02d:%02d", now.year(), now.month(), now.day(), now.hour(), now.minute(), now.second());
-  return String(buffer);
+  return buffer;
 }
