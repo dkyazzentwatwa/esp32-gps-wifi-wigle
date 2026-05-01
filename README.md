@@ -18,7 +18,7 @@ This project is for passive network discovery and location logging only. It does
 | OLED UI | Rotating dashboard pages for GPS, session stats, top access points, and storage health |
 | Storage | SD session logs, periodic summary file, write-error tracking, and automatic rotation by size |
 | Serial shell | `help`, `status`, `gps`, `scan`, `log on/off`, `fast on/off`, `ble on/off`, and `rotate` commands |
-| Optional hardware | Button pins can be enabled in `Config.h` for page switching and logging pause/resume |
+| Optional hardware | Button pins can be enabled in `src/Config.h` for page switching and logging pause/resume |
 | Optional BLE | BLE scanner hook is present but disabled by default so the base WiFi logger stays small and stable |
 
 ## Hardware
@@ -42,7 +42,7 @@ This project is for passive network discovery and location logging only. It does
 | OLED SCL | GPIO 22 | Default ESP32 I2C SCL |
 | OLED VCC | 3.3V | Most SSD1306 modules support 3.3V |
 | OLED GND | GND | Common ground |
-| SD CS | GPIO 5 | Configurable in `Config.h` |
+| SD CS | GPIO 5 | Configurable in `src/Config.h` |
 | SD MOSI | GPIO 23 | Default ESP32 SPI MOSI |
 | SD MISO | GPIO 19 | Default ESP32 SPI MISO |
 | SD SCK | GPIO 18 | Default ESP32 SPI clock |
@@ -125,7 +125,7 @@ MAC,SSID,AuthMode,FirstSeen,Channel,Frequency,RSSI,CurrentLatitude,CurrentLongit
 
 ## Configuration
 
-Edit `Config.h` for field tuning:
+Edit `src/Config.h` for field tuning:
 
 - `GPS_RX_PIN`, `GPS_TX_PIN`, `GPS_BAUD`
 - `SD_CS_PIN`
@@ -152,12 +152,23 @@ BLE is intentionally disabled by default. If enabled later, keep BLE output in a
 
 ## Project Layout
 
-- `esp32-gps-wifi-wigle.ino` - setup/loop orchestration
-- `Config.h` - pins, intervals, feature flags
-- `GpsManager.*` - GPS parsing and GPS-backed clock
-- `WifiScanner.*` - passive WiFi scan, unique BSSID tracking, top APs
-- `StorageManager.*` - SD logs, WiGLE CSV, summary files
-- `DisplayUi.*` - OLED dashboard pages
-- `SerialShell.*` - field debug commands
-- `BleScanner.*` - optional BLE extension hook
+```text
+esp32-gps-wifi-wigle/
+|-- esp32-gps-wifi-wigle.ino   # Arduino entrypoint: setup/loop orchestration
+|-- src/                       # Firmware modules compiled by Arduino CLI
+|-- tools/                     # Local helper scripts
+|-- wardriver1.jpg
+|-- wardriver2.jpg
+`-- README.md
+```
+
+Key firmware files:
+
+- `src/Config.h` - pins, intervals, feature flags
+- `src/GpsManager.*` - GPS parsing and GPS-backed clock
+- `src/WifiScanner.*` - passive WiFi scan, unique BSSID tracking, top APs
+- `src/StorageManager.*` - SD logs, WiGLE CSV, summary files
+- `src/DisplayUi.*` - OLED dashboard pages
+- `src/SerialShell.*` - field debug commands
+- `src/BleScanner.*` - optional BLE extension hook
 - `tools/validate_wigle_csv.py` - quick CSV sanity checker before WiGLE upload

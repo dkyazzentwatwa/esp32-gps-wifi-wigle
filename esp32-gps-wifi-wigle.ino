@@ -6,14 +6,14 @@
  * live in the companion modules next to this file.
  */
 
-#include "BleScanner.h"
-#include "Config.h"
-#include "DisplayUi.h"
-#include "GpsManager.h"
-#include "SerialShell.h"
-#include "StorageManager.h"
-#include "WardriverTypes.h"
-#include "WifiScanner.h"
+#include "src/BleScanner.h"
+#include "src/Config.h"
+#include "src/DisplayUi.h"
+#include "src/GpsManager.h"
+#include "src/SerialShell.h"
+#include "src/StorageManager.h"
+#include "src/WardriverTypes.h"
+#include "src/WifiScanner.h"
 
 AppStats stats;
 AppState appState;
