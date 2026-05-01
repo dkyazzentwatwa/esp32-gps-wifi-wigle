@@ -126,23 +126,23 @@ void WifiScanner::updateTopAps(const WifiNetworkRecord &record, AppStats &stats)
 String WifiScanner::authMode(wifi_auth_mode_t auth) const {
   switch (auth) {
     case WIFI_AUTH_OPEN:
-      return "OPEN";
+      return "[ESS]";
     case WIFI_AUTH_WEP:
-      return "WEP";
+      return "[WEP][ESS]";
     case WIFI_AUTH_WPA_PSK:
-      return "WPA_PSK";
+      return "[WPA-PSK-CCMP][ESS]";
     case WIFI_AUTH_WPA2_PSK:
-      return "WPA2_PSK";
+      return "[WPA2-PSK-CCMP][ESS]";
     case WIFI_AUTH_WPA_WPA2_PSK:
-      return "WPA_WPA2_PSK";
+      return "[WPA-PSK-CCMP][WPA2-PSK-CCMP][ESS]";
     case WIFI_AUTH_WPA2_ENTERPRISE:
-      return "WPA2_ENTERPRISE";
+      return "[WPA2-EAP-CCMP][ESS]";
     case WIFI_AUTH_WPA3_PSK:
-      return "WPA3_PSK";
+      return "[WPA3-SAE-CCMP][ESS]";
     case WIFI_AUTH_WPA2_WPA3_PSK:
-      return "WPA2_WPA3_PSK";
+      return "[WPA2-PSK-CCMP][WPA3-SAE-CCMP][ESS]";
     default:
-      return "UNKNOWN";
+      return "[ESS]";
   }
 }
 

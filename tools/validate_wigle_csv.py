@@ -11,6 +11,7 @@ EXPECTED_HEADER = [
     "AuthMode",
     "FirstSeen",
     "Channel",
+    "Frequency",
     "RSSI",
     "CurrentLatitude",
     "CurrentLongitude",
@@ -42,15 +43,16 @@ def validate(path: Path) -> int:
             return fail(f"line {line_number} has {len(row)} columns")
         if not row[0]:
             return fail(f"line {line_number} has an empty MAC/BSSID")
-        if row[10] != "WIFI":
+        if row[11] != "WIFI":
             return fail(f"line {line_number} Type must be WIFI")
         try:
             int(row[4])
             int(row[5])
-            float(row[6])
+            int(row[6])
             float(row[7])
             float(row[8])
             float(row[9])
+            float(row[10])
         except ValueError as exc:
             return fail(f"line {line_number} has invalid numeric data: {exc}")
 

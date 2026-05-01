@@ -77,7 +77,7 @@ bool StorageManager::createWifiLog(const FixData &fix) {
 
 bool StorageManager::appendHeader(File &file) {
   file.println(F("WigleWifi-1.4,appRelease=ESP32WardriverPro,model=ESP32,release=1.0,device=ESP32,display=SSD1306,board=esp32"));
-  file.println(F("MAC,SSID,AuthMode,FirstSeen,Channel,RSSI,CurrentLatitude,CurrentLongitude,AltitudeMeters,AccuracyMeters,Type"));
+  file.println(F("MAC,SSID,AuthMode,FirstSeen,Channel,Frequency,RSSI,CurrentLatitude,CurrentLongitude,AltitudeMeters,AccuracyMeters,Type"));
   return file.getWriteError() == 0;
 }
 
@@ -100,6 +100,8 @@ bool StorageManager::writeWifiRecord(const WifiNetworkRecord &record, const FixD
   file.print(csvEscape(String(fix.timestamp)));
   file.print(',');
   file.print(record.channel);
+  file.print(',');
+  file.print(record.frequencyMHz);
   file.print(',');
   file.print(record.rssi);
   file.print(',');

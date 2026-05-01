@@ -12,7 +12,7 @@ This project is for passive network discovery and location logging only. It does
 
 | Area | Feature |
 | --- | --- |
-| WiFi logging | Passive station-mode scans with SSID, BSSID, auth mode, channel, RSSI, GPS position, altitude, and HDOP |
+| WiFi logging | Passive station-mode scans with SSID, BSSID, auth mode, channel, frequency, RSSI, GPS position, altitude, and HDOP |
 | WiGLE export | Writes `WigleWifi-1.4` CSV files named like `/wigle_YYYYMMDD_HHMMSS.csv` |
 | GPS reliability | Waits for a fresh GPS fix before logging rows and continuously parses GPS between scans |
 | OLED UI | Rotating dashboard pages for GPS, session stats, top access points, and storage health |
@@ -119,8 +119,8 @@ Example CSV rows:
 
 ```csv
 WigleWifi-1.4,appRelease=ESP32WardriverPro,model=ESP32,release=1.0,device=ESP32,display=SSD1306,board=esp32
-MAC,SSID,AuthMode,FirstSeen,Channel,RSSI,CurrentLatitude,CurrentLongitude,AltitudeMeters,AccuracyMeters,Type
-"AA:BB:CC:DD:EE:FF","CoffeeShopWiFi","WPA2_PSK","2026-05-01 19:12:44",6,-61,37.774900,-122.419400,18.2,0.9,WIFI
+MAC,SSID,AuthMode,FirstSeen,Channel,Frequency,RSSI,CurrentLatitude,CurrentLongitude,AltitudeMeters,AccuracyMeters,Type
+"AA:BB:CC:DD:EE:FF","CoffeeShopWiFi","[WPA2-PSK-CCMP][ESS]","2026-05-01 19:12:44",6,2437,-61,37.774900,-122.419400,18.2,0.9,WIFI
 ```
 
 ## Configuration

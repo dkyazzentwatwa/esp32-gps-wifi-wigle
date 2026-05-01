@@ -1,3 +1,11 @@
+/*
+ * esp32-gps-wifi-wigle - GPS + WiFi wardriving logger for WiGLE.net.
+ *
+ * The main sketch only owns setup/loop orchestration. Hardware setup,
+ * WiFi scanning, storage, display, BLE hooks, and serial shell commands
+ * live in the companion modules next to this file.
+ */
+
 #include "BleScanner.h"
 #include "Config.h"
 #include "DisplayUi.h"
