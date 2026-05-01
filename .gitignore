@@ -1,0 +1,28 @@
+# Arduino / ESP32 build outputs
+build/
+.build/
+*.bin
+*.elf
+*.hex
+*.map
+*.uf2
+*.partitions.bin
+*.bootloader.bin
+*.merged.bin
+*.factory.bin
+compile_commands.json
+
+# Arduino CLI local state
+arduino-cli.yaml
+.arduino15/
+.arduinoIDE/
+
+# Local logs and OS noise
+*.log
+__pycache__/
+wigle_*.csv
+summary_*.txt
+.DS_Store
+.AppleDouble
+.LSOverride
+*~

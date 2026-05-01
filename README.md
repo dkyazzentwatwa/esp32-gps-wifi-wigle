@@ -1,54 +1,163 @@
-# esp32-gps-wifi-wigle
-A DIY wardriver using ESP32 for GPS + WiFi data
+# ESP32 Wardriver Pro
 
-# GPS and WiFi Network Scanner
+A passive ESP32 GPS + WiFi wardriving logger that writes WiGLE-compatible CSV files to an SD card while showing live field status on a 128x64 OLED.
 
-## Description
+This project is for passive network discovery and location logging only. It does not deauthenticate clients, join networks, inject packets, or perform active attacks.
 
-This project is a comprehensive GPS and WiFi network scanning system using an ESP32 microcontroller, a GPS module, an OLED display, and an SD card. The system is designed to log GPS data and nearby WiFi networks for easy uploading to Wigle.net, making it ideal for wardriving, geolocation studies, and wireless network analysis.
-
-## Features
-
-- **GPS Integration**: Retrieves and displays latitude, longitude, altitude, and satellite count.
-- **Real-Time Clock (RTC)**: Synchronizes with GPS time for accurate timestamping.
-- **WiFi Scanning**: Scans for nearby WiFi networks, capturing SSID, BSSID, channel, RSSI, and encryption type.
-- **Data Logging**: Stores GPS and WiFi data in a CSV file on an SD card for post-analysis.
-- **OLED Display**: Real-time display of GPS data, network count, and scan count.
-- **Serial Output**: Prints scan results and status messages to the serial monitor for debugging and real-time monitoring.
-
-## Components
-
-- **ESP32**: Microcontroller with integrated WiFi and Bluetooth.
-- **GPS Module**: For acquiring GPS data (latitude, longitude, altitude, etc.).
-- **OLED Display (128x64)**: For displaying real-time GPS and WiFi data.
-- **SD Card Module**: For logging data in CSV format.
-- **RTC Module**: Keeps accurate time using GPS synchronization.
-
-<img src="wardriver1.jpg" alt="Wardriver project" width="300"/>
+<img src="wardriver1.jpg" alt="ESP32 wardriver hardware" width="300"/>
 <br/>
-<img src="wardriver2.jpg" alt="Wardriver project" width="300"/>
+<img src="wardriver2.jpg" alt="ESP32 wardriver enclosure" width="300"/>
 
-## How It Works
+## What It Can Do
 
-1. **Initialization**: Sets up serial communication, initializes the GPS module, OLED display, SD card, and RTC.
-2. **GPS Data Handling**: Continuously reads GPS data and updates the RTC.
-3. **WiFi Scanning**: Periodically scans for WiFi networks, logs the data, and updates the display.
-4. **Data Display**: Shows GPS data, number of networks found, and scan count on the OLED display.
-5. **Data Logging**: Saves detailed information about each WiFi network and GPS position to a CSV file on the SD card.
+| Area | Feature |
+| --- | --- |
+| WiFi logging | Passive station-mode scans with SSID, BSSID, auth mode, channel, RSSI, GPS position, altitude, and HDOP |
+| WiGLE export | Writes `WigleWifi-1.4` CSV files named like `/wigle_YYYYMMDD_HHMMSS.csv` |
+| GPS reliability | Waits for a fresh GPS fix before logging rows and continuously parses GPS between scans |
+| OLED UI | Rotating dashboard pages for GPS, session stats, top access points, and storage health |
+| Storage | SD session logs, periodic summary file, write-error tracking, and automatic rotation by size |
+| Serial shell | `help`, `status`, `gps`, `scan`, `log on/off`, `fast on/off`, `ble on/off`, and `rotate` commands |
+| Optional hardware | Button pins can be enabled in `Config.h` for page switching and logging pause/resume |
+| Optional BLE | BLE scanner hook is present but disabled by default so the base WiFi logger stays small and stable |
 
-## Usage
+## Hardware
 
-1. **Setup**: Connect the components as per the wiring diagram and upload the code to the ESP32.
-2. **Operation**: Power on the device. The system will display GPS data on the OLED screen and log WiFi networks every 15 seconds.
-3. **Data Retrieval**: Access the logged data by removing the SD card and opening the CSV file on a computer.
-<img src="csv_data.jpg" alt="Wardriver data collection" width="300"/>
+- ESP32 DevKit-style board
+- GPS module that outputs NMEA at 9600 baud
+- 128x64 SSD1306 I2C OLED
+- MicroSD card module
+- FAT32-formatted microSD card
+- Optional momentary buttons for field controls
 
-## Applications
+## Default Wiring
 
-- **Wardriving**: Collect and analyze data on available WiFi networks while moving through different locations.
-- **Geolocation Studies**: Study the relationship between geographic locations and WiFi network distribution.
-- **Wireless Network Analysis**: Evaluate network presence, signal strength, and security protocols in various areas.
+| Module | ESP32 pin | Notes |
+| --- | --- | --- |
+| GPS TX | GPIO 16 | ESP32 RX for `Serial1` |
+| GPS RX | GPIO 17 | ESP32 TX for `Serial1` |
+| GPS VCC | 3.3V or 5V | Match your GPS module |
+| GPS GND | GND | Common ground |
+| OLED SDA | GPIO 21 | Default ESP32 I2C SDA |
+| OLED SCL | GPIO 22 | Default ESP32 I2C SCL |
+| OLED VCC | 3.3V | Most SSD1306 modules support 3.3V |
+| OLED GND | GND | Common ground |
+| SD CS | GPIO 5 | Configurable in `Config.h` |
+| SD MOSI | GPIO 23 | Default ESP32 SPI MOSI |
+| SD MISO | GPIO 19 | Default ESP32 SPI MISO |
+| SD SCK | GPIO 18 | Default ESP32 SPI clock |
+| SD VCC | 3.3V | Use level shifting if your module requires it |
+| SD GND | GND | Common ground |
 
-## Contribution
+## Arduino CLI Setup
 
-I welcome contributions from the community! Feel free to fork the repository, submit issues, and create pull requests to improve the functionality and performance of this project.
+Install the ESP32 core and libraries:
+
+```bash
+arduino-cli core install esp32:esp32
+arduino-cli lib install "TinyGPSPlus"
+arduino-cli lib install "Adafruit SSD1306"
+arduino-cli lib install "RTClib"
+```
+
+Compile:
+
+```bash
+arduino-cli compile --fqbn esp32:esp32:esp32 /Users/cypher/Documents/GitHub/esp32-gps-wifi-wigle
+```
+
+Upload after replacing the port with the current ESP32 port:
+
+```bash
+arduino-cli board list
+arduino-cli upload --fqbn esp32:esp32:esp32 -p /dev/cu.usbserial-0001 /Users/cypher/Documents/GitHub/esp32-gps-wifi-wigle
+```
+
+Open the serial shell:
+
+```bash
+arduino-cli monitor -p /dev/cu.usbserial-0001 -c baudrate=115200
+```
+
+## Field Workflow
+
+1. Format the SD card as FAT32 and insert it before boot.
+2. Power the ESP32 outside or near a window until the OLED shows a fresh GPS fix.
+3. The logger creates a session CSV after GPS time is available.
+4. Walk or drive your route while the OLED rotates through GPS, stats, top APs, and storage pages.
+5. Use the serial shell when connected to a laptop:
+
+```text
+help
+status
+gps
+scan
+fast on
+log off
+log on
+rotate
+```
+
+6. Remove the SD card and upload the `wigle_*.csv` file to WiGLE.
+
+Optional local validation after copying a CSV off the SD card:
+
+```bash
+python3 tools/validate_wigle_csv.py /path/to/wigle_YYYYMMDD_HHMMSS.csv
+```
+
+Example serial output:
+
+```text
+ESP32 Wardriver Pro
+Commands: help, status, gps, scan, log on|off, fast on|off, ble on|off, rotate
+Scan #4 found 18 networks
+  AA:BB:CC:DD:EE:FF ch 6 -61 dBm CoffeeShopWiFi
+```
+
+Example CSV rows:
+
+```csv
+WigleWifi-1.4,appRelease=ESP32WardriverPro,model=ESP32,release=1.0,device=ESP32,display=SSD1306,board=esp32
+MAC,SSID,AuthMode,FirstSeen,Channel,RSSI,CurrentLatitude,CurrentLongitude,AltitudeMeters,AccuracyMeters,Type
+"AA:BB:CC:DD:EE:FF","CoffeeShopWiFi","WPA2_PSK","2026-05-01 19:12:44",6,-61,37.774900,-122.419400,18.2,0.9,WIFI
+```
+
+## Configuration
+
+Edit `Config.h` for field tuning:
+
+- `GPS_RX_PIN`, `GPS_TX_PIN`, `GPS_BAUD`
+- `SD_CS_PIN`
+- `OLED_ADDRESS`
+- `MIN_SATELLITES`
+- `SCAN_INTERVAL_MS`
+- `FAST_SCAN_INTERVAL_MS`
+- `BUTTON_NEXT_PIN`, `BUTTON_SELECT_PIN`
+- `ENABLE_BLE_SCANNER`
+
+Buttons are disabled by default with `-1`. Set the button pins and wire each button from the GPIO to GND; the firmware uses `INPUT_PULLUP`.
+
+BLE is intentionally disabled by default. If enabled later, keep BLE output in a separate file so the WiGLE WiFi CSV remains clean.
+
+## Troubleshooting
+
+| Problem | What to check |
+| --- | --- |
+| OLED says SD missing | Confirm FAT32 format, CS pin `5`, SPI wiring, and 3.3V power |
+| No GPS fix | Move outside, check GPS TX to ESP32 GPIO 16, confirm 9600 baud, wait for satellites |
+| CSV does not appear | Logging starts after a fresh GPS fix; use `gps` and `status` in serial monitor |
+| Upload fails | Run `arduino-cli board list` again and use the current port |
+| WiGLE rejects file | Confirm the first two CSV lines are present and the file was not edited by spreadsheet software |
+
+## Project Layout
+
+- `esp32-gps-wifi-wigle.ino` - setup/loop orchestration
+- `Config.h` - pins, intervals, feature flags
+- `GpsManager.*` - GPS parsing and GPS-backed clock
+- `WifiScanner.*` - passive WiFi scan, unique BSSID tracking, top APs
+- `StorageManager.*` - SD logs, WiGLE CSV, summary files
+- `DisplayUi.*` - OLED dashboard pages
+- `SerialShell.*` - field debug commands
+- `BleScanner.*` - optional BLE extension hook
+- `tools/validate_wigle_csv.py` - quick CSV sanity checker before WiGLE upload
